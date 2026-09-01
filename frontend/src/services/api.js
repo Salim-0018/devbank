@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const apiRequest = async (endpoint, options = {}) => {
     const response = await fetch(`${API_URL}${endpoint}`, {
@@ -9,15 +9,35 @@ const apiRequest = async (endpoint, options = {}) => {
         }
     });
 
-    const data = await response.json();
+    let data = {};
+
+    try {
+        data = await response.json();
+    } catch {
+        data = {};
+    }
+
+    if (response.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
+        if (window.location.pathname !== "/login") {
+            window.location.href = "/login";
+        }
+
+        throw new Error("Session expired. Please login again.");
+    }
 
     if (!response.ok) {
-        throw new Error(data.message || "Something went wrong");
+        throw new Error(
+            data.message || "Something went wrong"
+        );
     }
 
     return data;
 };
 
+// ==================== AUTH ====================
 
 export const loginUser = (email, password) => {
     return apiRequest("/auth/login", {
@@ -28,7 +48,6 @@ export const loginUser = (email, password) => {
         })
     });
 };
-
 
 export const registerUser = (name, email, password) => {
     return apiRequest("/auth/register", {
@@ -41,54 +60,59 @@ export const registerUser = (name, email, password) => {
     });
 };
 
+// ==================== ACCOUNT ====================
 
 export const getAccount = (token) => {
     return apiRequest("/accounts", {
-        method: "GET",
         headers: {
             Authorization: `Bearer ${token}`
         }
     });
 };
 
+// ==================== TRANSACTIONS ====================
 
 export const getTransactions = (token) => {
     return apiRequest("/transactions/history", {
-        method: "GET",
         headers: {
             Authorization: `Bearer ${token}`
         }
     });
 };
 
-
-export const depositMoney = (token, amount, description) => {
+export const depositMoney = (
+    token,
+    amount,
+    description
+) => {
     return apiRequest("/transactions/deposit", {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-            amount: Number(amount),
-            description: description || "Money deposit"
+            amount,
+            description
         })
     });
 };
 
-
-export const withdrawMoney = (token, amount, description) => {
+export const withdrawMoney = (
+    token,
+    amount,
+    description
+) => {
     return apiRequest("/transactions/withdraw", {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-            amount: Number(amount),
-            description: description || "Money withdrawal"
+            amount,
+            description
         })
     });
 };
-
 
 export const transferMoney = (
     token,
@@ -103,8 +127,8 @@ export const transferMoney = (
         },
         body: JSON.stringify({
             receiverAccountNumber,
-            amount: Number(amount),
-            description: description || "Money transfer"
+            amount,
+            description
         })
     });
 };
