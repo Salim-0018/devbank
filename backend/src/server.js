@@ -11,6 +11,9 @@ const transactionRoutes = require("./routes/transactionRoutes");
 
 const app = express();
 
+// Trust the Nginx reverse proxy
+app.set("trust proxy", 1);
+
 const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = (

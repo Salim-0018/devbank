@@ -4,49 +4,97 @@ services:
     image: mysql:8.4
     container_name: devbank-mysql
     restart: unless-stopped
+
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: devbank
-      MYSQL_USER: devbank
-      MYSQL_PASSWORD: devbankpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
     volumes:
       - devbank_mysql_data:/var/lib/mysql
+
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "devbank", "-pdevbankpassword"]
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -u${MYSQL_USER} -p${MYSQL_PASSWORD}"
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
+
+    networks:
+      - devbank-network
 
 
   backend:
     build:
       context: ./backend
+
     container_name: devbank-backend
     restart: unless-stopped
-    ports:
-      - "5000:5000"
+
     environment:
-      PORT: 5000
-      DB_PORT: 
-      DB_HOST: mysql
-      DB_USER: devbank
-      DB_PASSWORD: devbankpassword
-      DB_NAME: devbank
-      JWT_SECRET: devbank_super_secret_change_this
+      PORT: ${PORT}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: http://localhost
+
+    expose:
+      - "5000"
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+
     depends_on:
       mysql:
         condition: service_healthy
 
+    networks:
+      - devbank-network
+
+
   frontend:
     build:
       context: ./frontend
+      args:
+        VITE_API_URL: /api
+
     container_name: devbank-frontend
     restart: unless-stopped
+
     ports:
-      - "5173:80"
+      - "80:80"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+
+    networks:
+      - devbank-network
 
 
 volumes:
   devbank_mysql_data:
+
+
+networks:
+  devbank-network:
+    driver: bridge
