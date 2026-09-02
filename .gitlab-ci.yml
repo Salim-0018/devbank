@@ -1,0 +1,63 @@
+stages:
+    - build
+    - test
+    - push 
+    - deploy
+
+
+variables:
+    DEPLOY_ENV: "production"
+    GITLAB_USER_KEY: "this-is-my-secret-key"
+
+
+build_job:
+    stage: build
+    script:
+        - echo "this $CI_PROJECT_NAME build is done using cammand <docker build -t tag ."
+    tags:
+        - dev
+
+test_job:
+    stage: test
+    script:
+        - echo "this is testing of out docker build"
+        - mkdir -p logs
+        - echo "these are my test results" > logs/app.log
+
+
+    artifacts:
+        paths:
+           - logs/
+        expire_in: 1 week
+    tags:
+       - dev
+push_job:
+    stage: push
+    script: 
+        - echo " this is pushing of docker hub"
+        - echo "is pushing to docker hub for $DEPLOY_ENV"
+
+deploy_job:
+    stage: deploy
+    script:
+        - echo "this is deploying to docker hub$DOCKERHUB_USER"
+        - echo "SABHI CHIJE THIKH SE CHAL RHI HAI $CI_JOB_STAGE" >> logs/app.log
+    artifacts:
+        paths:
+           - logs/
+        expire_in: 1 week 
+
+dev_test_job:
+    stage: test
+    script:
+        - echo "this"
+        - echo "dev ke liye sahi se ho gyi hai $GITLAB_USER_KEY"
+
+prd_test_job:
+    stage: test
+    script:
+        - echo "this"
+        - echo "prd ke liye sahi se ho gyi hai$GITLAB_USER_KEY"
+
+    tags:
+        - dev
